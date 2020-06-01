@@ -1,0 +1,19 @@
+{
+  "name": "vbase-backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "serve": "node index.js"
+  },
+  "dependencies": {
+    "js-htmlencode": "^0.3.0",
+    "body-parser": "^1.16.0",
+    "client-sessions": "^0.7.0",
+    "dotenv": "^5.0.1",
+    "express": "^4.14.0",
+    "mongodb": "^2.2.21"
+  },
+  "author": "Marcos Sandrini Lemos",
+  "license": "ISC"
+}
