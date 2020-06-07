@@ -8,8 +8,5 @@
 
 + upgrade all libs
 + `Import/export` instead of `require/module.exports`
++ modernize code
 - test functionality
-- modernize code
-    - research possible differences in new Mongo lib to improve code
-    - eliminate mutability whatsoever
-    - take HOST var out of the sitemap generator code

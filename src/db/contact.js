@@ -1,14 +1,11 @@
-const contact = (db, payload) => {
-  payload.dateSent = new Date()
-  return new Promise((resolve, reject) => {
-    db.collection('contactmessages').insertOne(payload).then((results, error) => {
-      if (error) {
-        reject(error)
-      } else {
-        resolve({ feedback: results.result })
-      }
-    })
-  })
+const contact = async (db, _, body) => {
+  const payload = { ...body, dateSent: new Date() }
+  const { results, error } = await db.collection('contactmessages').insertOne(payload)
+
+  if (error) {
+    return { error }
+  }
+  return { data: results.result }
 }
 
 export default contact

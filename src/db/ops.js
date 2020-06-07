@@ -1,9 +1,5 @@
-const ops = (db, payload) => {
-  return new Promise((resolve, reject) => {
-    db.listCollections().toArray().then((results, error) => {
-      resolve(results, error)
-    })
-  })
+const ops = async (db) => {
+  return await db.listCollections().toArray()
 }
 
 export default ops

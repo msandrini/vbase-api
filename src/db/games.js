@@ -11,24 +11,24 @@ const projectionForList = {
 const sortCriteria = { title: 1 }
 const basicCondition = { specialStatus: { $ne: 'homebrew' } }
 
-const _escapeRegExp = str => str.replace(/[-[\]/{}()*+?.\\^$|]/g, '\\$&')
-const _regExpParam = str => ({ $regex: `${_escapeRegExp(str)}`, $options: 'i' })
-const _unique = (array) => array.filter((value, index, self) => self.indexOf(value) === index)
+const getEscapedRegExp = str => str.replace(/[-[\]/{}()*+?.\\^$|]/g, '\\$&')
+const getRegExpParam = str => ({ $regex: `${getEscapedRegExp(str)}`, $options: 'i' })
+const getUnique = (array) => array.filter((value, index, self) => self.indexOf(value) === index)
 
-const _getConditions = data => {
+const getConditions = data => {
   const conditions = {}
   if (data.companyid) {
-    conditions.companies = _regExpParam(data.companyid)
+    conditions.companies = getRegExpParam(data.companyid)
   }
   if (data.review) {
     const lang = data.lang
-    conditions[`editorReview.${lang}`] = _regExpParam(data.review)
+    conditions[`editorReview.${lang}`] = getRegExpParam(data.review)
   }
   if (data.genreid) {
     conditions.genres = data.genreid
   }
   if (data.names) {
-    conditions.$or = [{ title: _regExpParam(data.names) }, { 'otherNames.name': _regExpParam(data.names) }]
+    conditions.$or = [{ title: getRegExpParam(data.names) }, { 'otherNames.name': getRegExpParam(data.names) }]
   }
   if (data.seriesid) {
     conditions.series = data.seriesid
@@ -66,113 +66,102 @@ const _getConditions = data => {
   return conditions
 }
 
-const _getGames = (db, cursor, page, pageSize = ITEMS_PER_PAGE) => {
+const getGames = async (db, cursor, page, pageSize = ITEMS_PER_PAGE) => {
   const skip = (page - 1) * pageSize
-  return new Promise((resolve, reject) => {
-    cursor.skip(skip).limit(pageSize).sort(sortCriteria).toArray((err, docs) => {
-      if (err) {
-        reject(err)
-      } else {
-        cursor.count(false, (errCount, count) => {
-          if (errCount) {
-            reject(errCount)
-          } else {
-            docs = docs || []
-            let genres = []
-            for (const d of docs) {
-              if (d.genres) {
-                genres = [...genres, ...d.genres]
-              }
-            }
-            let companies = []
-            for (const d of docs) {
-              if (d.companies) {
-                companies = [...companies, ...d.companies]
-              }
-            }
-            if (genres.length || companies.length) {
-              const genresCondition = { _id: { $in: _unique(genres) || [] } }
-              const companiesCondition = { _id: { $in: _unique(companies) || [] } }
-              Promise.all([
-                db.collection('genres').find(genresCondition, { title: 1 }).toArray(),
-                db.collection('companies').find(companiesCondition, { name: 1 }).toArray()
-              ]).then((results) => {
-                const [docsGenre, docsCompany] = results
+  const { error, results } = await cursor.skip(skip).limit(pageSize).sort(sortCriteria).toArray()
+  if (error) {
+    return { error }
+  }
+  const { error: errorCount, count } = await cursor.count(false)
+  if (errorCount) {
+    return { error: errorCount }
+  }
+  const docs = results || []
+  let genres = []
+  for (const d of docs) {
+    if (d.genres) {
+      genres = [...genres, ...d.genres]
+    }
+  }
+  let companies = []
+  for (const d of docs) {
+    if (d.companies) {
+      companies = [...companies, ...d.companies]
+    }
+  }
+  if (genres.length || companies.length) {
+    const genresCondition = { _id: { $in: getUnique(genres) || [] } }
+    const companiesCondition = { _id: { $in: getUnique(companies) || [] } }
+    const results = await Promise.all([
+      db.collection('genres').find(genresCondition, { title: 1 }).toArray(),
+      db.collection('companies').find(companiesCondition, { name: 1 }).toArray()
+    ])
+    const [docsGenre, docsCompany] = results
 
-                const genresObj = {}
-                for (const g of docsGenre) {
-                  genresObj[g._id] = g.title
-                }
-                for (const d of docs) {
-                  const genresForThisDoc = []
-                  for (const dg of d.genres) {
-                    genresForThisDoc.push(genresObj[dg])
-                  }
-                  d.genreTitles = genresForThisDoc
-                  delete d.genres
-                }
-
-                const companiesObj = {}
-                for (const c of docsCompany) {
-                  companiesObj[c._id] = c.name
-                }
-                for (const d of docs) {
-                  const companiesForThisDoc = []
-                  for (const dg of d.companies) {
-                    companiesForThisDoc.push(companiesObj[dg])
-                  }
-                  d.companyNames = companiesForThisDoc
-                  delete d.companies
-                }
-                resolve({ games: docs, total: count })
-              }).catch((errAll) => {
-                reject(errAll)
-              })
-            } else {
-              resolve({ games: docs, total: count })
-            }
-          }
-        })
+    const genresObj = {}
+    for (const g of docsGenre) {
+      genresObj[g._id] = g.title
+    }
+    for (const d of docs) {
+      const genresForThisDoc = []
+      for (const dg of d.genres) {
+        genresForThisDoc.push(genresObj[dg])
       }
-    })
-  })
+      d.genreTitles = genresForThisDoc
+      delete d.genres
+    }
+
+    const companiesObj = {}
+    for (const c of docsCompany) {
+      companiesObj[c._id] = c.name
+    }
+    for (const d of docs) {
+      const companiesForThisDoc = []
+      for (const dg of d.companies) {
+        companiesForThisDoc.push(companiesObj[dg])
+      }
+      d.companyNames = companiesForThisDoc
+      delete d.companies
+    }
+    return { games: docs, total: count }
+  } else {
+    return { games: docs, total: count }
+  }
 }
 
 const games = {
 
-  byNames: (db, name, page = 0) => {
-    const search = _regExpParam(name)
-    const condition = Object.assign({}, basicCondition, { $or: [{ title: search }, { 'otherNames.name': search }] })
+  byNames: (db, { name, page = 0 }) => {
+    const search = getRegExpParam(name)
+    const condition = { ...basicCondition, $or: [{ title: search }, { 'otherNames.name': search }] }
     const gamesCursor = db.collection('games').find(condition, projectionForList)
-    return _getGames(db, gamesCursor, page)
+    return getGames(db, gamesCursor, page)
   },
 
-  all: (db, page = 0) => {
+  all: (db, { page = 0 }) => {
     const gamesCursor = db.collection('games').find(basicCondition, projectionForList)
-    return _getGames(db, gamesCursor, page)
+    return getGames(db, gamesCursor, page)
   },
 
-  fromSeries: (db, seriesIds) => {
-    const condition = Object.assign({}, basicCondition, { series: { $in: seriesIds.split(',') } })
+  fromSeries: (db, { seriesIds }) => {
+    const condition = { ...basicCondition, series: { $in: seriesIds.split(',') } }
     const gamesCursor = db.collection('games').find(condition, { title: 1 })
-    return _getGames(db, gamesCursor, 1, 100)
+    return getGames(db, gamesCursor, 1, 100)
   },
 
-  advanced: (db, postBody) => {
-    const data = postBody
-    const conditions = Object.assign({}, basicCondition, _getConditions(data))
-    const _doMainCall = function (conditions) {
+  advanced: async (db, _, body) => {
+    const data = body
+    const conditions = { ...basicCondition, ...getConditions(data) }
+    const doMainCall = (conditions) => {
       const gamesCursor = db.collection('games').find(conditions, projectionForList)
-      return _getGames(db, gamesCursor, data.page || 1)
+      return getGames(db, gamesCursor, data.page || 1)
     }
     if (data.company) {
-      db.collection('companies').find({ name: _regExpParam(data.company) }, { _id: 1 }).toArray().then(docs => {
-        const companyIds = docs.map(d => d._id)
-        conditions.companies = { $in: companyIds }
-        return _doMainCall(conditions)
-      })
+      const docs = await db.collection('companies').find({ name: getRegExpParam(data.company) }, { _id: 1 }).toArray()
+      const companyIds = docs.map(d => d._id)
+      return doMainCall({ ...conditions, companies: { $in: companyIds } })
     } else {
-      return _doMainCall(conditions)
+      return doMainCall(conditions)
     }
   }
 
