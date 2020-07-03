@@ -4,8 +4,6 @@
 
 `CONNECTION=mongodb://... npm start`
 
-## TODO
+## lint (standard.js)
 
-+ upgrade all libs
-+ modernize code
-- test functionality
+`npm run lint`
