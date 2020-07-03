@@ -1,11 +1,11 @@
 const contact = async (db, _, body) => {
   const payload = { ...body, dateSent: new Date() }
-  const { results, error } = await db.collection('contactmessages').insertOne(payload)
-
-  if (error) {
+  try {
+    const results = await db.collection('contactmessages').insertOne(payload)
+    return { data: { insertedCount: results.insertedCount } }
+  } catch (error) {
     return { error }
   }
-  return { data: results.result }
 }
 
-export default contact
+module.exports = contact

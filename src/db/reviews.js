@@ -4,23 +4,24 @@ const reviews = {
     const search = { game }
     const projection = { _id: 0, game: 0 }
     const sort = { added: 1 }
-    const { error, results } = db.collection('reviews').find(search, projection).sort(sort).toArray()
-
-    if (error) {
+    try {
+      const results = await db.collection('reviews').find(search, projection).sort(sort).toArray()
+      return { data: results }
+    } catch (error) {
       return { error }
     }
-    return { data: results }
   },
 
   insert: async (db, _, body) => {
     const payload = { ...body, added: new Date(), source: 'simple-api' }
-    const { result, error } = await db.collection('reviews').insertOne(payload)
-    if (error) {
+    try {
+      const results = await db.collection('reviews').insertOne(payload)
+      return { data: { insertedCount: results.insertedCount } }
+    } catch (error) {
       return { error }
     }
-    return { data: result.result }
   }
 
 }
 
-export default reviews
+module.exports = reviews

@@ -68,15 +68,19 @@ const getConditions = data => {
 
 const getGames = async (db, cursor, page, pageSize = ITEMS_PER_PAGE) => {
   const skip = (page - 1) * pageSize
-  const { error, results } = await cursor.skip(skip).limit(pageSize).sort(sortCriteria).toArray()
-  if (error) {
+  let docs
+  let count
+  try {
+    const results = await cursor.skip(skip).limit(pageSize).sort(sortCriteria).toArray()
+    docs = results || []
+  } catch (error) {
     return { error }
   }
-  const { error: errorCount, count } = await cursor.count(false)
-  if (errorCount) {
+  try {
+    count = await cursor.count(false)
+  } catch (errorCount) {
     return { error: errorCount }
   }
-  const docs = results || []
   let genres = []
   for (const d of docs) {
     if (d.genres) {
@@ -92,11 +96,18 @@ const getGames = async (db, cursor, page, pageSize = ITEMS_PER_PAGE) => {
   if (genres.length || companies.length) {
     const genresCondition = { _id: { $in: getUnique(genres) || [] } }
     const companiesCondition = { _id: { $in: getUnique(companies) || [] } }
-    const results = await Promise.all([
-      db.collection('genres').find(genresCondition, { title: 1 }).toArray(),
-      db.collection('companies').find(companiesCondition, { name: 1 }).toArray()
-    ])
-    const [docsGenre, docsCompany] = results
+    let docsGenre
+    let docsCompany
+    try {
+      const results = await Promise.all([
+        db.collection('genres').find(genresCondition, { title: 1 }).toArray(),
+        db.collection('companies').find(companiesCondition, { name: 1 }).toArray()
+      ])
+      docsGenre = results[0]
+      docsCompany = results[1]
+    } catch (error) {
+      return { error }
+    }
 
     const genresObj = {}
     for (const g of docsGenre) {
@@ -123,48 +134,52 @@ const getGames = async (db, cursor, page, pageSize = ITEMS_PER_PAGE) => {
       d.companyNames = companiesForThisDoc
       delete d.companies
     }
-    return { games: docs, total: count }
+    return { data: { games: docs, total: count } }
   } else {
-    return { games: docs, total: count }
+    return { data: { games: docs, total: count } }
   }
 }
 
 const games = {
 
-  byNames: (db, { name, page = 0 }) => {
+  byNames: async (db, { name, page = 0 }) => {
     const search = getRegExpParam(name)
     const condition = { ...basicCondition, $or: [{ title: search }, { 'otherNames.name': search }] }
     const gamesCursor = db.collection('games').find(condition, projectionForList)
-    return getGames(db, gamesCursor, page)
+    return await getGames(db, gamesCursor, page)
   },
 
-  all: (db, { page = 0 }) => {
+  all: async (db, { page = 0 }) => {
     const gamesCursor = db.collection('games').find(basicCondition, projectionForList)
-    return getGames(db, gamesCursor, page)
+    return await getGames(db, gamesCursor, page)
   },
 
-  fromSeries: (db, { seriesIds }) => {
-    const condition = { ...basicCondition, series: { $in: seriesIds.split(',') } }
+  fromSeries: async (db, { series }) => {
+    const condition = { ...basicCondition, series: { $in: series.split(',') } }
     const gamesCursor = db.collection('games').find(condition, { title: 1 })
-    return getGames(db, gamesCursor, 1, 100)
+    return await getGames(db, gamesCursor, 1, 100)
   },
 
   advanced: async (db, _, body) => {
     const data = body
     const conditions = { ...basicCondition, ...getConditions(data) }
-    const doMainCall = (conditions) => {
+    const doMainCall = async (conditions) => {
       const gamesCursor = db.collection('games').find(conditions, projectionForList)
-      return getGames(db, gamesCursor, data.page || 1)
+      return await getGames(db, gamesCursor, data.page || 1)
     }
     if (data.company) {
-      const docs = await db.collection('companies').find({ name: getRegExpParam(data.company) }, { _id: 1 }).toArray()
-      const companyIds = docs.map(d => d._id)
-      return doMainCall({ ...conditions, companies: { $in: companyIds } })
+      try {
+        const docs = await db.collection('companies').find({ name: getRegExpParam(data.company) }, { _id: 1 }).toArray()
+        const companyIds = docs.map(d => d._id)
+        return await doMainCall({ ...conditions, companies: { $in: companyIds } })
+      } catch (error) {
+        return { error }
+      }
     } else {
-      return doMainCall(conditions)
+      return await doMainCall(conditions)
     }
   }
 
 }
 
-export default games
+module.exports = games

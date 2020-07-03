@@ -1,6 +1,6 @@
-import path from 'path'
-import fs from 'fs'
-import htmlEncodeLib from 'js-htmlencode'
+const path = require('path')
+const fs = require('fs')
+const htmlEncodeLib = require('js-htmlencode')
 
 const htmlEncode = htmlEncodeLib.htmlEncode
 
@@ -11,7 +11,8 @@ const basicCondition = { specialStatus: { $ne: 'homebrew' } }
 const HOST = 'https://vbase.games/'
 
 const header = '<?xml version="1.0" encoding="UTF-8"?>' +
-  '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">'
+  '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" ' +
+  'xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">'
 const footer = '</urlset>'
 const urlsInitial = [
   { loc: HOST + 'all-games', changefreq: 'weekly', images: [], priority: '0.8' },
@@ -23,9 +24,11 @@ const changefreq = 'monthly'
 
 const sitemap = async db => {
   const urls = [...urlsInitial]
-  const { error, games } = await db.collection('games').find(basicCondition, projectionForList)
-    .sort(sortCriteria).toArray()
-  if (error) {
+  let games
+  try {
+    games = await db.collection('games').find(basicCondition, projectionForList)
+      .sort(sortCriteria).toArray()
+  } catch (error) {
     return { error }
   }
   const priority = '0.7'
@@ -81,7 +84,7 @@ const sitemap = async db => {
   }
   const xml = header + tags.join('') + footer
   fs.writeFileSync(path.join(__dirname, '../static/sitemap.xml'), xml)
-  return { done: true, tagsWritten: tags.length }
+  return { data: { done: true, tagsWritten: tags.length } }
 }
 
-export default sitemap
+module.exports = sitemap

@@ -1,4 +1,4 @@
-import { gameIdIsValid } from './utils.server'
+const { gameIdIsValid } = require('../../utils/string')
 
 const singleInfo = async (db, { id }) => {
   if (!gameIdIsValid(id)) {
@@ -6,8 +6,10 @@ const singleInfo = async (db, { id }) => {
   }
   // Query for the game primary info
   const condition = { _id: id }
-  const { resultsG, error } = db.collection('games').findOne(condition, { _id: 0 })
-  if (error) {
+  let resultsG
+  try {
+    resultsG = await db.collection('games').findOne(condition, { _id: 0 })
+  } catch (error) {
     return { error }
   }
   if (resultsG === null) {
@@ -38,7 +40,12 @@ const singleInfo = async (db, { id }) => {
   promises.push(db.collection('reviews').aggregate(aggregationParams).toArray())
 
   // Get all results
-  const results = await Promise.all(promises)
+  let results
+  try {
+    results = await Promise.all(promises)
+  } catch (error) {
+    return { error }
+  }
   // Process results from the four types
   let counter
   results.forEach((resultForType, index) => {
@@ -66,4 +73,4 @@ const singleInfo = async (db, { id }) => {
   return { data: doc }
 }
 
-export default singleInfo
+module.exports = singleInfo

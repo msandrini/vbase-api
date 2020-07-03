@@ -1,4 +1,4 @@
-import mongoDB from 'mongodb'
+const mongo = require('mongodb')
 
 const getMongoUrl = (local = false) => {
   const localUrl = 'mongodb://localhost:27017/local'
@@ -17,16 +17,18 @@ const issueError = (res, error) => {
   }
 }
 
-const connectAndExecute = (req, res) => async (routine) => {
-  const mongo = mongoDB.MongoClient
-  const { error, client } = await mongo.connect(getMongoUrl())
+const connectAndExecute = (routine) => async (req, res) => {
+  const connectionURL = getMongoUrl()
+
+  const client = new mongo.MongoClient(connectionURL, { useUnifiedTopology: true })
+  const { error } = await client.connect()
 
   if (error) {
     if (client) client.close()
     console.error(error)
     issueError(res, error)
   } else {
-    const { error, data } = routine(client.db, req.params, req.body)
+    const { error, data } = await routine(client.db('vbase2'), req.params, req.body)
     if (error || !data) {
       issueError(res, error)
     } else {
@@ -36,4 +38,4 @@ const connectAndExecute = (req, res) => async (routine) => {
   }
 }
 
-export default connectAndExecute
+module.exports = connectAndExecute

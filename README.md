@@ -7,6 +7,5 @@
 ## TODO
 
 + upgrade all libs
-+ `Import/export` instead of `require/module.exports`
 + modernize code
 - test functionality

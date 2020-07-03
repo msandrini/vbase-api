@@ -1,11 +1,11 @@
-import info from './db/info'
-import games from './db/games'
-import singleGame from './db/single-game'
-import contact from './db/contact'
-import reviews from './db/reviews'
-import sitemap from './db/sitemap'
-import ops from './db/ops'
-import connectAndExecute from '../utils/connection'
+const info = require('./db/info')
+const games = require('./db/games')
+const singleGame = require('./db/single-game')
+const contact = require('./db/contact')
+const reviews = require('./db/reviews')
+const sitemap = require('./db/sitemap')
+const ops = require('./db/ops')
+const connectAndExecute = require('../utils/connection')
 
 const routing = (app) => {
   const defaultRoute = (req, res) => res.sendStatus(404)
@@ -48,4 +48,4 @@ const routing = (app) => {
     .get('*', defaultRoute)
 }
 
-export default routing
+module.exports = routing

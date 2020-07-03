@@ -1,5 +1,5 @@
-import path from 'path'
-import fs from 'fs'
+const path = require('path')
+const fs = require('fs')
 
 const getDBNameFromType = (type) => {
   const typeWhitelist = ['addon', 'genre', 'series', 'company']
@@ -20,8 +20,10 @@ const singleInfo = async (db, { type, key }) => {
   const dbName = getDBNameFromType(type)
 
   if (dbName) {
-    const { doc, error } = await db.collection(dbName).findOne(condition, { _id: 0 })
-    if (error) {
+    let doc
+    try {
+      doc = await db.collection(dbName).findOne(condition, { _id: 0 })
+    } catch (error) {
       return { error }
     }
     if (!doc) {
@@ -34,4 +36,4 @@ const singleInfo = async (db, { type, key }) => {
   return { error: `${type} not recognised as a type` }
 }
 
-export default singleInfo
+module.exports = singleInfo

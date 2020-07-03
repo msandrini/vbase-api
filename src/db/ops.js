@@ -1,5 +1,10 @@
 const ops = async (db) => {
-  return await db.listCollections().toArray()
+  try {
+    const collections = await db.listCollections().toArray()
+    return { data: collections }
+  } catch (error) {
+    return { error }
+  }
 }
 
-export default ops
+module.exports = ops
