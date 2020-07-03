@@ -36,31 +36,31 @@ const getConditions = data => {
   if (data.addonid) {
     conditions.addOns = data.addonid
   }
-  if (data['scores-from'] || data['scores-to']) {
+  if (data.scores.from || data.scores.to) {
     conditions.editorScore = {}
-    if (data['scores-from']) {
-      conditions.editorScore.$gte = parseFloat(data['scores-from'])
+    if (data.scores.from) {
+      conditions.editorScore.$gte = parseFloat(data.scores.from)
     }
-    if (data['scores-to']) {
-      conditions.editorScore.$lte = parseFloat(data['scores-to'])
+    if (data.scores.to) {
+      conditions.editorScore.$lte = parseFloat(data.scores.to)
     }
   }
-  if (data['sizes-from'] || data['sizes-to']) {
+  if (data.sizes.from || data.sizes.to) {
     conditions.cartridgeSize = {}
-    if (data['sizes-from']) {
-      conditions.cartridgeSize.$gte = parseFloat(data['sizes-from'])
+    if (data.sizes.from) {
+      conditions.cartridgeSize.$gte = parseFloat(data.sizes.from)
     }
-    if (data['sizes-to']) {
-      conditions.cartridgeSize.$lte = parseFloat(data['sizes-to'])
+    if (data.sizes.to) {
+      conditions.cartridgeSize.$lte = parseFloat(data.sizes.to)
     }
   }
-  if (data['years-from'] || data['years-to']) {
+  if (data.years.from || data.years.to) {
     conditions.year = {}
-    if (data['years-from']) {
-      conditions.year.$gte = parseInt(data['years-from'], 10)
+    if (data.years.from) {
+      conditions.year.$gte = parseInt(data.years.from, 10)
     }
-    if (data['years-to']) {
-      conditions.year.$lte = parseInt(data['years-to'], 10)
+    if (data.years.to) {
+      conditions.year.$lte = parseInt(data.years.to, 10)
     }
   }
   return conditions
