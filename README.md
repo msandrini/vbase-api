@@ -1,5 +1,7 @@
 # vbase API
 
+Hooray!
+
 ## execute
 
 `CONNECTION=mongodb://... npm start`
